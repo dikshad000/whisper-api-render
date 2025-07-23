@@ -32,3 +32,5 @@ def transcribe():
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
 
     return jsonify({'transcription': transcript['text']})
+    if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
