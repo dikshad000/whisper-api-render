@@ -19,22 +19,23 @@ def transcribe():
         return jsonify({'error': 'No mp4_url provided'}), 400
 
     mp4_url = data['mp4_url']
-
+    
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
-            response = requests.get(mp4_url)
+            response = requests.get(mp4_url, headers={
+                "User-Agent": "Mozilla/5.0"
+            })
+            response.raise_for_status()  # raises error if 4xx/5xx
             temp_file.write(response.content)
             temp_file_path = temp_file.name
-    except Exception as e:
-        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
 
-    try:
         with open(temp_file_path, "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    except Exception as e:
-        return jsonify({'error': f'Whisper transcription failed: {str(e)}'}), 500
 
-    return jsonify({'transcription': transcript['text']})
+        return jsonify({'transcription': transcript['text']})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
