@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 import openai
 import os
+from werkzeug.utils import secure_filename
 import tempfile
-import requests
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -14,23 +14,19 @@ def home():
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
-    data = request.get_json()
-    if not data or 'mp4_url' not in data:
-        return jsonify({'error': 'No mp4_url provided'}), 400
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
 
-    mp4_url = data['mp4_url']
+    file = request.files['file']
+    filename = secure_filename(file.filename)
 
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
-            response = requests.get(mp4_url)
-            temp_file.write(response.content)
-            temp_file_path = temp_file.name
-    except Exception as e:
-        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        file.save(temp.name)
+        audio_file = open(temp.name, "rb")
 
-    with open(temp_file_path, "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
 
     return jsonify({'transcription': transcript['text']})
-    if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
